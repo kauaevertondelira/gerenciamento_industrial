@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexus Industrial - Gestão de Stock (MRO)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        tailwind.config = {
+            theme: { extend: { colors: { dark: { 900: '#0f172a', 800: '#1e293b', 700: '#334155' }, brand: '#3b82f6' }, fontSize: { 'xxs': '0.65rem' } } }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        .table-row-hover:hover { background-color: rgba(59, 130, 246, 0.05); }
+        .swal2-input { width: 85% !important; margin: 10px auto !important; border-color: #334155 !important; color: #cbd5e1 !important; border-radius: 6px !important;}
+        .swal2-input:focus { border-color: #3b82f6 !important; box-shadow: none !important; }
+    </style>
+</head>
+<body class="bg-[#0b1120] text-slate-300 font-sans h-screen flex overflow-hidden text-sm">
+
+    <aside class="w-64 bg-dark-800 border-r border-dark-700 flex flex-col z-20 shrink-0">
+        <div class="h-16 flex items-center px-6 border-b border-dark-700 bg-dark-900/50">
+            <i class="fas fa-layer-group text-brand text-xl"></i>
+            <span class="ml-3 font-bold text-lg text-white tracking-wider">NEXUS<span class="font-light text-slate-400">MGMT</span></span>
+        </div>
+        
+        <div class="p-4 flex-1 overflow-y-auto">
+            <p class="text-xxs font-bold text-slate-500 uppercase tracking-widest mb-3 px-2">Análise Estratégica</p>
+            <nav class="space-y-1 mb-6">
+                <a href="index.html" class="flex items-center px-3 py-2 text-slate-400 hover:bg-dark-700 hover:text-white rounded-md transition-colors">
+                    <i class="fas fa-chart-line w-5"></i><span class="ml-2">Dashboard Geral</span>
+                </a>
+            </nav>
+
+            <p class="text-xxs font-bold text-slate-500 uppercase tracking-widest mb-3 px-2">Gestão Operacional</p>
+            <nav class="space-y-1">
+                <a href="ativos.html" class="flex items-center px-3 py-2 text-slate-400 hover:bg-dark-700 hover:text-white rounded-md transition-colors">
+                    <i class="fas fa-server w-5"></i><span class="ml-2">Parque de Ativos</span>
+                </a>
+                <a href="os.html" class="flex items-center px-3 py-2 text-slate-400 hover:bg-dark-700 hover:text-white rounded-md transition-colors">
+                    <i class="fas fa-clipboard-list w-5"></i><span class="ml-2">Ordens de Serviço</span>
+                </a>
+                <a href="estoque.html" class="flex items-center px-3 py-2 bg-brand/10 text-brand rounded-md border-l-2 border-brand font-medium">
+                    <i class="fas fa-boxes w-5"></i><span class="ml-2">Stock e MRO</span>
+                </a>
+            </nav>
+        </div>
+
+        <div class="p-4 border-t border-dark-700 bg-dark-900/30">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                    <div id="user-photo" class="w-8 h-8 rounded bg-brand flex items-center justify-center font-bold text-white overflow-hidden">
+                        <i class="fas fa-spinner fa-spin text-xs"></i>
+                    </div>
+                    <div class="ml-3">
+                        <p id="user-name" class="text-sm font-medium text-white leading-none truncate w-24">A carregar...</p>
+                        <p id="user-role" class="text-xs text-slate-500 mt-1 truncate w-24">Gestor</p>
+                    </div>
+                </div>
+                <button id="logout-btn" class="text-slate-500 hover:text-red-400 transition" title="Sair"><i class="fas fa-sign-out-alt"></i></button>
+            </div>
+        </div>
+    </aside>
+
+    <main class="flex-1 flex flex-col h-screen overflow-hidden">
+        
+        <header class="h-16 bg-dark-800 border-b border-dark-700 flex justify-between items-center px-6 shrink-0 z-10">
+            <div class="flex items-center space-x-4">
+                <h1 class="text-lg font-semibold text-white">Gestão de Stock (MRO)</h1>
+            </div>
+            <div class="flex items-center space-x-3">
+                <button onclick="exportToExcel()" class="bg-dark-900 border border-dark-700 hover:bg-dark-700 text-slate-300 px-3 py-1.5 rounded-md text-sm transition-colors flex items-center">
+                    <i class="fas fa-file-csv mr-2 text-green-500"></i> Exportar CSV
+                </button>
+                <button onclick="addItem()" class="bg-brand hover:bg-blue-600 text-white px-4 py-1.5 rounded-md text-sm font-medium shadow-lg shadow-brand/20 transition flex items-center">
+                    <i class="fas fa-plus mr-2"></i> Nova Peça
+                </button>
+            </div>
+        </header>
+
+        <div class="flex-1 overflow-y-auto p-6">
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div class="bg-dark-800 p-4 rounded-lg border border-dark-700 flex items-center justify-between">
+                    <div>
+                        <p class="text-slate-400 text-xs font-semibold uppercase tracking-wider">Total de SKUs</p>
+                        <h3 class="text-2xl font-bold text-white mt-1" id="kpi-skus">0</h3>
+                    </div>
+                    <div class="w-10 h-10 rounded-full bg-dark-900 flex items-center justify-center text-slate-400"><i class="fas fa-barcode"></i></div>
+                </div>
+                <div class="bg-dark-800 p-4 rounded-lg border border-red-900/50 flex items-center justify-between relative overflow-hidden">
+                    <div class="absolute left-0 top-0 w-1 h-full bg-red-500"></div>
+                    <div>
+                        <p class="text-red-400 text-xs font-semibold uppercase tracking-wider">Rutura de Stock (Abaixo Mínimo)</p>
+                        <h3 class="text-2xl font-bold text-red-400 mt-1" id="kpi-critical">0</h3>
+                    </div>
+                    <div class="w-10 h-10 rounded-full bg-red-500/10 flex items-center justify-center text-red-500"><i class="fas fa-exclamation-circle"></i></div>
+                </div>
+                <div class="bg-dark-800 p-4 rounded-lg border border-dark-700 flex items-center justify-between">
+                    <div>
+                        <p class="text-brand text-xs font-semibold uppercase tracking-wider">Volume Físico (Unidades)</p>
+                        <h3 class="text-2xl font-bold text-brand mt-1" id="kpi-units">0</h3>
+                    </div>
+                    <div class="w-10 h-10 rounded-full bg-brand/10 flex items-center justify-center text-brand"><i class="fas fa-cubes"></i></div>
+                </div>
+            </div>
+
+            <div class="bg-dark-800 border border-dark-700 rounded-lg overflow-hidden shadow-lg">
+                <div class="p-4 border-b border-dark-700 bg-dark-900/30">
+                    <h2 class="font-semibold text-white">Inventário de Manutenção</h2>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse whitespace-nowrap" id="inventoryTable">
+                        <thead>
+                            <tr class="bg-dark-900/50 text-xs uppercase text-slate-400 border-b border-dark-700">
+                                <th class="px-5 py-3 font-semibold">Código SKU</th>
+                                <th class="px-5 py-3 font-semibold">Peça / Componente</th>
+                                <th class="px-5 py-3 font-semibold">Nível de Stock</th>
+                                <th class="px-5 py-3 font-semibold text-center">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inventory-list" class="divide-y divide-dark-700 text-sm">
+                            <tr><td colspan="4" class="px-5 py-8 text-center text-slate-500"><i class="fas fa-spinner fa-spin mr-2"></i>A sincronizar base de dados...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getDatabase, ref, onValue, push, update, remove, get, child } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAnCmlVVqAMdGhkNIUpzsV-T6X_-pLtuAU",
+            authDomain: "nexux-iot-senai.firebaseapp.com",
+            databaseURL: "https://nexux-iot-senai-default-rtdb.firebaseio.com",
+            projectId: "nexux-iot-senai",
+            storageBucket: "nexux-iot-senai.firebasestorage.app",
+            messagingSenderId: "307785456493",
+            appId: "1:307785456493:web:2d07cea8554893f1681864"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const auth = getAuth(app); 
+        const inventoryRef = ref(db, 'inventory');
+
+        // Perfil & Proteção
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                get(child(ref(db), `users/${user.uid}`)).then((snapshot) => {
+                    if (snapshot.exists()) {
+                        const userData = snapshot.val();
+                        document.getElementById('user-name').innerText = userData.name;
+                        document.getElementById('user-role').innerText = userData.role;
+                        const photoDiv = document.getElementById('user-photo');
+                        if (userData.photoURL && userData.photoURL.trim() !== '') {
+                            photoDiv.innerHTML = `<img src="${userData.photoURL}" class="w-full h-full object-cover">`;
+                        } else {
+                            photoDiv.innerHTML = userData.name.charAt(0).toUpperCase();
+                        }
+                    }
+                });
+            } else {
+                window.location.href = 'login.html';
+            }
+        });
+
+        document.getElementById('logout-btn')?.addEventListener('click', () => signOut(auth));
+
+        // Renderizar Tabela e KPIs
+        onValue(inventoryRef, (snapshot) => {
+            const data = snapshot.val();
+            const list = document.getElementById('inventory-list');
+            list.innerHTML = '';
+            
+            let totalSkus = 0, criticalItems = 0, totalUnits = 0;
+
+            if (data) {
+                Object.entries(data).forEach(([id, item]) => {
+                    totalSkus++;
+                    totalUnits += (item.qty || 0);
+                    
+                    let isCritical = item.qty <= item.min;
+                    if (isCritical) criticalItems++;
+
+                    // Lógica da Barra Visual de Saúde do Stock
+                    let percentage = item.min > 0 ? (item.qty / item.min) * 100 : 100;
+                    if (percentage > 100) percentage = 100;
+                    
+                    let barColor = isCritical ? 'bg-red-500' : 'bg-green-500';
+                    let qtyDisplay = isCritical 
+                        ? `<span class="text-red-400 font-bold">${item.qty} un</span>` 
+                        : `<span class="text-white">${item.qty} un</span>`;
+
+                    let rowClass = isCritical ? 'bg-red-900/10 hover:bg-red-900/20' : 'table-row-hover';
+
+                    list.innerHTML += `
+                        <tr class="${rowClass} transition-colors">
+                            <td class="px-5 py-4 font-mono text-slate-400 text-xs">${item.sku}</td>
+                            <td class="px-5 py-4 font-medium text-white">${item.name}</td>
+                            <td class="px-5 py-4 w-1/3">
+                                <div class="flex items-center justify-between mb-1">
+                                    <div class="text-xs">
+                                        ${qtyDisplay} <span class="text-slate-500 mx-1">/</span> <span class="text-slate-400">Min: ${item.min}</span>
+                                    </div>
+                                    ${isCritical ? '<span class="text-xxs font-bold text-red-400 bg-red-500/10 px-1.5 py-0.5 rounded uppercase">Repor</span>' : ''}
+                                </div>
+                                <div class="w-full bg-dark-900 h-1.5 rounded overflow-hidden border border-dark-700">
+                                    <div class="${barColor} h-full" style="width: ${percentage}%"></div>
+                                </div>
+                            </td>
+                            <td class="px-5 py-4 text-center space-x-1">
+                                <button onclick="editItem('${id}', '${item.sku}', '${item.name}', ${item.qty}, ${item.min})" class="w-8 h-8 rounded bg-dark-900 hover:bg-dark-700 text-brand border border-dark-700 transition" title="Editar">
+                                    <i class="fas fa-pen text-xs"></i>
+                                </button>
+                                <button onclick="deleteItem('${id}')" class="w-8 h-8 rounded bg-dark-900 hover:bg-dark-700 text-red-400 border border-dark-700 transition" title="Remover">
+                                    <i class="fas fa-trash text-xs"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            } else {
+                list.innerHTML = `<tr><td colspan="4" class="px-5 py-8 text-center text-slate-500">Nenhum item registado no stock.</td></tr>`;
+            }
+
+            // Atualiza KPIs
+            document.getElementById('kpi-skus').innerText = totalSkus;
+            document.getElementById('kpi-critical').innerText = criticalItems;
+            document.getElementById('kpi-units').innerText = totalUnits;
+        });
+
+        const swalDarkTheme = { background: '#1e293b', color: '#f8fafc', confirmButtonColor: '#3b82f6', cancelButtonColor: '#ef4444' };
+
+        window.addItem = async () => {
+            const { value: formValues } = await Swal.fire({
+                title: 'Registar Nova Peça', ...swalDarkTheme,
+                html: `
+                    <div class="text-left px-4">
+                        <input id="n-sku" class="swal2-input bg-dark-900 text-white" placeholder="Código / SKU (Ex: ROL-204)">
+                        <input id="n-name" class="swal2-input bg-dark-900 text-white" placeholder="Descrição da Peça">
+                        <div class="grid grid-cols-2 gap-2 mt-2">
+                            <div>
+                                <label class="text-xs text-slate-400 ml-2">Qtd. Física Atual</label>
+                                <input id="n-qty" type="number" class="swal2-input bg-dark-900 text-white !w-[90%]" value="0">
+                            </div>
+                            <div>
+                                <label class="text-xs text-slate-400 ml-2">Alarme Mínimo</label>
+                                <input id="n-min" type="number" class="swal2-input bg-dark-900 text-white !w-[90%]" value="5">
+                            </div>
+                        </div>
+                    </div>
+                `,
+                showCancelButton: true, cancelButtonText: 'Cancelar', confirmButtonText: 'Guardar',
+                preConfirm: () => {
+                    return {
+                        sku: document.getElementById('n-sku').value || `SKU-${Math.floor(Math.random()*1000)}`,
+                        name: document.getElementById('n-name').value,
+                        qty: parseInt(document.getElementById('n-qty').value || 0),
+                        min: parseInt(document.getElementById('n-min').value || 5)
+                    }
+                }
+            });
+            if (formValues && formValues.name) push(inventoryRef, formValues);
+        };
+
+        window.editItem = async (id, sku, name, qty, min) => {
+            const { value: formValues } = await Swal.fire({
+                title: 'Atualizar Inventário', ...swalDarkTheme,
+                html: `
+                    <div class="text-left px-4">
+                        <label class="text-xs text-slate-400 ml-2">Descrição</label>
+                        <input id="e-name" class="swal2-input bg-dark-900 text-white" value="${name}">
+                        
+                        <div class="grid grid-cols-2 gap-2 mt-2">
+                            <div>
+                                <label class="text-xs text-slate-400 ml-2">Nova Quantidade</label>
+                                <input id="e-qty" type="number" class="swal2-input bg-dark-900 text-white !w-[90%]" value="${qty}">
+                            </div>
+                            <div>
+                                <label class="text-xs text-slate-400 ml-2">Novo Mínimo</label>
+                                <input id="e-min" type="number" class="swal2-input bg-dark-900 text-white !w-[90%]" value="${min}">
+                            </div>
+                        </div>
+                    </div>
+                `,
+                showCancelButton: true, cancelButtonText: 'Cancelar', confirmButtonText: 'Salvar Alterações',
+                preConfirm: () => {
+                    return {
+                        name: document.getElementById('e-name').value,
+                        qty: parseInt(document.getElementById('e-qty').value),
+                        min: parseInt(document.getElementById('e-min').value)
+                    }
+                }
+            });
+            if (formValues) update(ref(db, 'inventory/' + id), formValues);
+        };
+
+        window.deleteItem = (id) => {
+            Swal.fire({ title: 'Eliminar Registo?', text: "O histórico desta peça será apagado.", icon: 'warning', showCancelButton: true, confirmButtonText: 'Sim, eliminar', cancelButtonText: 'Cancelar', ...swalDarkTheme })
+            .then((r) => { if(r.isConfirmed) remove(ref(db, 'inventory/' + id)); });
+        };
+
+        // EXPORTAR PARA CSV 
+        window.exportToExcel = () => {
+            let table = document.getElementById("inventoryTable"); 
+            let csv = [];
+            let rows = table.querySelectorAll("tr");
+            
+            // Header
+            csv.push('"CÓDIGO SKU";"DESCRIÇÃO";"STOCK ATUAL";"STOCK MÍNIMO"');
+
+            // Data rows (ignorando a linha do spinner se existir)
+            for (let i = 1; i < rows.length; i++) {
+                let cols = rows[i].querySelectorAll("td");
+                if (cols.length < 4) continue; // Ignora o "A carregar"
+                
+                let sku = cols[0].innerText.trim();
+                let desc = cols[1].innerText.trim();
+                
+                // Extrair apenas os números da célula de Nível de Stock
+                let qtyText = cols[2].innerText;
+                let numbers = qtyText.match(/\d+/g); 
+                let qty = numbers ? numbers[0] : 0;
+                let min = numbers && numbers.length > 1 ? numbers[1] : 0;
+
+                csv.push(`"${sku}";"${desc}";"${qty}";"${min}"`);
+            }
+
+            let csvFile = new Blob(["\uFEFF" + csv.join("\n")], {type: "text/csv;charset=utf-8;"});
+            let downloadLink = document.createElement("a");
+            downloadLink.download = "Relatorio_Stock_Nexus.csv";
+            downloadLink.href = window.URL.createObjectURL(csvFile);
+            downloadLink.style.display = "none";
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+            
+            Swal.fire({ icon: 'success', title: 'Exportado!', text: 'O seu ficheiro CSV foi transferido.', toast: true, position: 'top-end', timer: 3000, showConfirmButton: false, ...swalDarkTheme });
+        };
+    </script>
+</body>
+</html>
