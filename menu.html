@@ -164,7 +164,7 @@
         // 1. Proteção de Rota e Dados do Utilizador (COM FOTO BASE64)
         onAuthStateChanged(auth, (user) => {
             if (!user) {
-                window.location.href = 'login.html';
+                window.location.href = 'index.html';
             } else {
                 get(child(ref(db), `users/${user.uid}`)).then((snapshot) => {
                     if (snapshot.exists()) {
@@ -184,7 +184,7 @@
         });
 
         document.getElementById('btnLogout').addEventListener('click', () => {
-            signOut(auth).then(() => window.location.href = 'login.html');
+            signOut(auth).then(() => window.location.href = 'index.html');
         });
 
         // 2. Lógica de Negócio (Ligar aos dados Reais)
